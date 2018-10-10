@@ -50,7 +50,8 @@ namespace RAWServer
                         var request = Encoding.UTF8.GetString(buffer, 0, reqContent);
 
                         var rdjtpReq = ParseRequest(request);
-                        
+
+                        Console.WriteLine($"request: {rdjtpReq.Method}");
 
                         switch (rdjtpReq.Method)
                         {
