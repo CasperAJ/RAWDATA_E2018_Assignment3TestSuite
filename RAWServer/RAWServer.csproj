@@ -11,4 +11,7 @@
   <ItemGroup>
     <Compile Remove="Models\EmptyClass.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+  </ItemGroup>
 </Project>

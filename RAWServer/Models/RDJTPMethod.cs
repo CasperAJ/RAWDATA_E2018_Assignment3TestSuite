@@ -3,8 +3,10 @@ namespace RAWServer.Models
 {
     public enum RDJTPMethod
     {
-        ok,
-        error,
-        not_found
+        create,
+        read,
+        update,
+        delete,
+        echo
     }
 }
