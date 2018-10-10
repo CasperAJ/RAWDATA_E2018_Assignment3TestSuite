@@ -8,7 +8,7 @@ namespace RAWServer.Models
         }
 
 
-        public string Status { get; set; }
+        public RDJTPStatus Status { get; set; }
         public string Body { get; set; }
     }
 }
