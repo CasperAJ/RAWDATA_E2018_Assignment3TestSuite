@@ -39,9 +39,9 @@ namespace RAWServer
                     Task.Run(() => {
 
                         // init
-                        var cat1 = new Category() { Cid = 1, Name = "Beverages" };
-                        var cat2 = new Category() { Cid = 2, Name = "Condiments" };
-                        var cat3 = new Category() { Cid = 3, Name = "Confections" };
+                        var cat1 = new Category() { cid = 1, name = "Beverages" };
+                        var cat2 = new Category() { cid = 2, name = "Condiments" };
+                        var cat3 = new Category() { cid = 3, name = "Confections" };
 
                         var categories = new List<Category>() { cat1, cat2, cat3 };
 
@@ -192,7 +192,10 @@ namespace RAWServer
         static RDJTPResponse HandleDelete(RDJTPRequest req, List<Category> categories){
 
             var path = req.Path.Split("/");
-            var elm = categories.Find(x => x.Cid == Convert.ToInt32(path[3]));
+
+            if (path.Length < 4) return HandleException(RDJTPStatus.Bad_Request);
+
+            var elm = categories.Find(x => x.cid == Convert.ToInt32(path[3]));
 
             if (elm == null) HandleException(RDJTPStatus.Not_Found);
 
@@ -214,7 +217,7 @@ namespace RAWServer
 
             var listlength = categories.Count;
 
-            newElement.Cid = listlength + 1;
+            newElement.cid = listlength + 1;
 
             categories.Add(newElement);
 
@@ -258,7 +261,7 @@ namespace RAWServer
                 return HandleException(RDJTPStatus.Bad_Request);
             }
 
-            var elm = categories.Find(x => x.Cid == Convert.ToInt32(path[3]));
+            var elm = categories.Find(x => x.cid == Convert.ToInt32(path[3]));
 
             elm = newElement;
 
@@ -270,21 +273,22 @@ namespace RAWServer
             var response = new RDJTPResponse();
 
             var path = req.Path.Split("/");
-
+            Console.WriteLine(path.Length);
             // we know that it can never exceed 3.
-            if (path.Length < 3)
+            if (path.Length < 4)
             {
-                response.Status = "1 OK";
+                Console.WriteLine("hit test");
+                response.Status = "1 Ok";
                 response.Body = JsonConvert.SerializeObject(categories);
                 return response;
             } else {
 
-                response.Status = "1 OK";
+                response.Status = "1 Ok";
                 int cid;
 
                 if (!int.TryParse(path[3], out cid)) return HandleException(RDJTPStatus.Bad_Request);
 
-                var element = categories.Find(x => x.Cid == cid);
+                var element = categories.Find(x => x.cid == cid);
 
                 if (element == null) return HandleException(RDJTPStatus.Not_Found);
 

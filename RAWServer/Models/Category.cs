@@ -4,8 +4,8 @@ namespace RAWServer.Models
     public class Category
     {
 
-        public int Cid { get; set; }
-        public string Name { get; set; }
+        public int cid { get; set; }
+        public string name { get; set; }
 
 
         public Category()
