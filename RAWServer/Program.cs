@@ -11,15 +11,12 @@ namespace RAWServer
 {
     class Program
     {
+
+
         static void Main(string[] args)
         {
 
-            // init
-            var cat1 = new Category() { Cid = 1, Name = "Beverages" };
-            var cat2 = new Category() { Cid = 1, Name = "Condiments" };
-            var cat3 = new Category() { Cid = 1, Name = "Confections" };
 
-            var categories = new List<Category>() { cat1, cat2, cat3 };
 
 
 
@@ -40,6 +37,16 @@ namespace RAWServer
                 var client = server.AcceptTcpClient();
 
                     Task.Run(() => {
+
+                        // init
+                        var cat1 = new Category() { Cid = 1, Name = "Beverages" };
+                        var cat2 = new Category() { Cid = 2, Name = "Condiments" };
+                        var cat3 = new Category() { Cid = 3, Name = "Confections" };
+
+                        var categories = new List<Category>() { cat1, cat2, cat3 };
+
+
+
                         Console.WriteLine("client connected!");
                         var strm = client.GetStream();
 
@@ -48,36 +55,69 @@ namespace RAWServer
                         var reqContent = strm.Read(buffer, 0, buffer.Length);
 
                         var request = Encoding.UTF8.GetString(buffer, 0, reqContent);
-
+                        
                         var rdjtpReq = ParseRequest(request);
 
-                        Console.WriteLine($"request: {rdjtpReq.Method}");
-
-                        switch (rdjtpReq.Method)
+                        if (rdjtpReq == null)
                         {
-                            case RDJTPMethod.create:
-                                HandleCreate(rdjtpReq);
-                                break;
-                            case RDJTPMethod.update:
-                                HandleUpdate(rdjtpReq);
-                                break;
-                            case RDJTPMethod.delete:
-                                HandleDelete(rdjtpReq);
-                                break;
-                            case RDJTPMethod.echo:
-                                HandleEcho(rdjtpReq);
-                                break;
-                            case RDJTPMethod.read:
-                                HandleRead(rdjtpReq);
-                                break;
-                            default:
-                                HandleException(RDJTPStatus.Not_Found);
-                                break;
+                            Respond(strm, HandleException(RDJTPStatus.Bad_Request, "illegal method"));
+                            strm.Close();
+                            return;
                         }
 
 
+                        if (!CheckRequest(rdjtpReq)){
+                            Respond(strm, HandleException(RDJTPStatus.Bad_Request, "missing resource"));
+                            strm.Close();
+                            return;
+                        }
 
+                        
 
+                        if(rdjtpReq.Path == null)
+                        {
+                            Respond(strm, HandleException(RDJTPStatus.Bad_Request));
+                            strm.Close();
+                            return;
+                        }
+                        
+                        if (!CheckRoute(rdjtpReq)){
+                            Console.WriteLine("hit");
+                            var expresponse = HandleException(RDJTPStatus.Not_Found);
+
+                            if (rdjtpReq.Body == null)
+                            {
+                                expresponse.Status += " missing body";
+                            }
+
+                            Respond(strm, expresponse);
+                            strm.Close();
+                            return;
+                        }
+                        
+                        var response = new RDJTPResponse();
+                        switch (rdjtpReq.Method)
+                        {
+                            case RDJTPMethod.create:
+                                response = HandleCreate(rdjtpReq, categories);
+                                break;
+                            case RDJTPMethod.update:
+                                response = HandleUpdate(rdjtpReq, categories);
+                                break;
+                            case RDJTPMethod.delete:
+                                response = HandleDelete(rdjtpReq, categories);
+                                break;
+                            case RDJTPMethod.echo:
+                                response = HandleEcho(rdjtpReq);
+                                break;
+                            case RDJTPMethod.read:
+                                response = HandleRead(rdjtpReq, categories);
+                                break;
+                            default:
+                            response = HandleException(RDJTPStatus.Error);
+                                break;
+                        }
+                        Respond(strm, response);
                         strm.Close();
                     });
 
@@ -86,44 +126,208 @@ namespace RAWServer
         }
 
 
+        static bool CheckRequest(RDJTPRequest req){
+            if (req.Method == RDJTPMethod.create || req.Method == RDJTPMethod.update)
+            {
+                if (req.Body == null) return false;
+            }
 
+            if (req.Path == null) return false;
+
+            return true;
+        }
+
+
+        static void Respond(NetworkStream strm, RDJTPResponse resp)
+        {
+            var jsonresponse = JsonConvert.SerializeObject(resp);
+            var payload = Encoding.UTF8.GetBytes(jsonresponse);
+
+            strm.Write(payload, 0, payload.Length);
+        }
         
 
         static RDJTPRequest ParseRequest(string content){
 
-            var request = JsonConvert.DeserializeObject<RDJTPRequest>(content);
+            var request = new RDJTPRequest();
+
+            try
+            {
+                request = JsonConvert.DeserializeObject<RDJTPRequest>(content);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+
 
             return request;
         }
 
 
-        static RDJTPResponse HandleDelete(RDJTPRequest req){
-            return new RDJTPResponse();
+        static bool CheckRoute(RDJTPRequest req){
+
+            //TODO: refractor later. this is non generic
+            if (!req.Path.Contains("/")) return false;
+
+
+            var path = req.Path.Split("/");
+
+
+
+            if (path[1] != "api") return false;
+
+
+            if (path[2] != "categories") { return false; }
+
+
+
+            return true;
+
         }
 
-        static RDJTPResponse HandleCreate(RDJTPRequest req)
-        {
-            return new RDJTPResponse();
+
+
+
+        static RDJTPResponse HandleDelete(RDJTPRequest req, List<Category> categories){
+
+            var path = req.Path.Split("/");
+            var elm = categories.Find(x => x.Cid == Convert.ToInt32(path[3]));
+
+            if (elm == null) HandleException(RDJTPStatus.Not_Found);
+
+            categories.Remove(elm);
+
+            return new RDJTPResponse() {Status="1 OK"};
         }
 
-        static RDJTPResponse HandleUpdate(RDJTPRequest req)
+        static RDJTPResponse HandleCreate(RDJTPRequest req, List<Category> categories)
         {
-            return new RDJTPResponse();
+
+
+            if (req.Body == null) return HandleException(RDJTPStatus.Bad_Request, "missing body");
+
+            var path = req.Path.Split("/");
+            if (path.Length < 3) return HandleException(RDJTPStatus.Bad_Request);
+
+            var newElement = JsonConvert.DeserializeObject<Category>(req.Body);
+
+            var listlength = categories.Count;
+
+            newElement.Cid = listlength + 1;
+
+            categories.Add(newElement);
+
+            var body = JsonConvert.SerializeObject(newElement);
+
+            return new RDJTPResponse() { Status="2 Created", Body=body};
         }
 
-        static RDJTPResponse HandleRead(RDJTPRequest req)
+        static RDJTPResponse HandleUpdate(RDJTPRequest req, List<Category> categories)
         {
-            return new RDJTPResponse();
+
+            if (req.Body == null) return HandleException(RDJTPStatus.Bad_Request, "missing body");
+
+            var path = req.Path.Split("/");
+            if (path.Length < 4) return HandleException(RDJTPStatus.Bad_Request);
+
+            var cid = path[3];
+
+
+
+
+            var newElement = new Category();
+
+            try
+            {
+                newElement = JsonConvert.DeserializeObject<Category>(req.Body);
+            }
+            catch (Exception)
+            {
+                return new RDJTPResponse() { Status = "4 Bad Request Illegal Body" };
+            }
+
+
+           
+
+
+            Console.WriteLine($"debug: {newElement}");
+
+            if (newElement == null)
+            {
+                return HandleException(RDJTPStatus.Bad_Request);
+            }
+
+            var elm = categories.Find(x => x.Cid == Convert.ToInt32(path[3]));
+
+            elm = newElement;
+
+            return new RDJTPResponse() { Status="3 Updated" };
+        }
+
+        static RDJTPResponse HandleRead(RDJTPRequest req, List<Category> categories)
+        {
+            var response = new RDJTPResponse();
+
+            var path = req.Path.Split("/");
+
+            // we know that it can never exceed 3.
+            if (path.Length < 3)
+            {
+                response.Status = "1 OK";
+                response.Body = JsonConvert.SerializeObject(categories);
+                return response;
+            } else {
+
+                response.Status = "1 OK";
+                int cid;
+
+                if (!int.TryParse(path[3], out cid)) return HandleException(RDJTPStatus.Bad_Request);
+
+                var element = categories.Find(x => x.Cid == cid);
+
+                if (element == null) return HandleException(RDJTPStatus.Not_Found);
+
+                response.Body = JsonConvert.SerializeObject(element);
+                return response;
+            }
+
+
         }
 
         static RDJTPResponse HandleEcho(RDJTPRequest req)
         {
-            return new RDJTPResponse();
+            var response = new RDJTPResponse() { Status = "1 OK", Body = req.Body };
+            return response;
         }
 
-        static RDJTPResponse HandleException(RDJTPStatus state)
+        static RDJTPResponse HandleException(RDJTPStatus state, string msg="")
         {
-            return new RDJTPResponse();
+            var response = new RDJTPResponse();
+            switch (state)
+            {
+                case RDJTPStatus.Not_Found:
+                    response.Status = "5 Not Found";
+                    break;
+                case RDJTPStatus.Bad_Request:
+                    if (msg != "")
+                    {
+
+                        response.Status = $"4 Bad Request {msg}";
+                    } else {
+                        response.Status = "4 Bad Request";
+                    }
+
+                    break;
+                case RDJTPStatus.Error:
+                    response.Status = "6 Error";
+                    break;
+                default:
+                    response.Status = "6 Error";
+                    break;
+            }
+
+            return response;
         }
     }
 }
