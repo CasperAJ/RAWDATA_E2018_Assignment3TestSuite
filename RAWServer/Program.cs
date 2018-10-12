@@ -301,6 +301,11 @@ namespace RAWServer
 
             var elm = categories.Find(x => x.cid == Convert.ToInt32(path[3]));
 
+            if (elm == null)
+            {
+                return HandleException(RDJTPStatus.Not_Found);
+            }
+
             elm = newElement;
 
             return new RDJTPResponse() { Status="3 Updated" };
