@@ -57,6 +57,9 @@ namespace RAWServer
                         var request = Encoding.UTF8.GetString(buffer, 0, reqContent);
                         
                         var rdjtpReq = ParseRequest(request);
+                        
+
+                        
 
                         if (rdjtpReq == null)
                         {
@@ -66,21 +69,28 @@ namespace RAWServer
                         }
 
 
+
+
+
                         if (!CheckRequest(rdjtpReq)){
-                            Respond(strm, HandleException(RDJTPStatus.Bad_Request, "missing resource"));
+                            var msg = CheckResource(rdjtpReq);
+                            Respond(strm, HandleException(RDJTPStatus.Bad_Request, $"missing resource {msg}"));
                             strm.Close();
                             return;
                         }
 
-                        
 
-                        if(rdjtpReq.Path == null)
+                        
+                        if (rdjtpReq.Path == null && rdjtpReq.Method != RDJTPMethod.echo)
                         {
+
                             Respond(strm, HandleException(RDJTPStatus.Bad_Request));
                             strm.Close();
                             return;
                         }
                         
+
+
                         if (!CheckRoute(rdjtpReq)){
                             Console.WriteLine("hit");
                             var expresponse = HandleException(RDJTPStatus.Not_Found);
@@ -94,7 +104,7 @@ namespace RAWServer
                             strm.Close();
                             return;
                         }
-                        
+                        Console.WriteLine("here");
                         var response = new RDJTPResponse();
                         switch (rdjtpReq.Method)
                         {
@@ -108,6 +118,7 @@ namespace RAWServer
                                 response = HandleDelete(rdjtpReq, categories);
                                 break;
                             case RDJTPMethod.echo:
+                                
                                 response = HandleEcho(rdjtpReq);
                                 break;
                             case RDJTPMethod.read:
@@ -127,14 +138,38 @@ namespace RAWServer
 
 
         static bool CheckRequest(RDJTPRequest req){
-            if (req.Method == RDJTPMethod.create || req.Method == RDJTPMethod.update)
+
+            if (req.Method == RDJTPMethod.create || req.Method == RDJTPMethod.update || req.Method == RDJTPMethod.echo)
             {
                 if (req.Body == null) return false;
             }
 
-            if (req.Path == null) return false;
+            if (req.Method != RDJTPMethod.echo)
+            {
+
+                if (req.Path == null) return false;
+            }
+
 
             return true;
+        }
+
+
+        static string CheckResource(RDJTPRequest req){
+            var msg = "";
+
+            if (req.Method == RDJTPMethod.create || req.Method == RDJTPMethod.update || req.Method == RDJTPMethod.echo)
+            {
+                if (req.Body == null) msg += "missing body";
+            }
+
+            if (req.Method != RDJTPMethod.echo)
+            {
+
+                if (req.Path == null) msg += "missing path";
+            }
+
+            return msg;
         }
 
 
@@ -166,7 +201,10 @@ namespace RAWServer
 
 
         static bool CheckRoute(RDJTPRequest req){
-
+            if (req.Method == RDJTPMethod.echo)
+            {
+                return true;
+            }
             //TODO: refractor later. this is non generic
             if (!req.Path.Contains("/")) return false;
 
