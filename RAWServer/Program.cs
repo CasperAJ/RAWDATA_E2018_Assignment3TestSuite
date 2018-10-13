@@ -248,10 +248,17 @@ namespace RAWServer
 
             if (req.Body == null) return HandleException(RDJTPStatus.Bad_Request, "missing body");
 
+           
+
             var path = req.Path.Split("/");
             if (path.Length < 3) return HandleException(RDJTPStatus.Bad_Request);
 
             var newElement = JsonConvert.DeserializeObject<Category>(req.Body);
+
+            if (string.IsNullOrEmpty(newElement.name))
+            {
+                return HandleException(RDJTPStatus.Bad_Request);
+            }
 
             var listlength = categories.Count;
 
