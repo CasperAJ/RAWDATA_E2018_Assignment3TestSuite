@@ -45,7 +45,8 @@ namespace RAWServer
                 Task.Run(() =>
                 {
 
-                  
+                    var failed = false;
+                    var expmsg = "";
 
                     Console.WriteLine("client connected!");
                     var strm = client.GetStream();
@@ -61,10 +62,29 @@ namespace RAWServer
                     // ie, the {} request, should return, missing date, missing body, missing method, and such
                     if (!request.Contains("date"))
                     {
-                        Respond(strm, HandleException(RDJTPStatus.Bad_Request, "missing date"));
+                        failed = true;
+                        expmsg = "missing date";
+
+                    }
+
+                    if(!request.Contains("method"))
+                    {
+                        expmsg += " missing method";
+                        failed = true;
+
+                    }
+
+
+
+
+                    if (failed)
+                    {
+                        Respond(strm, HandleException(RDJTPStatus.Bad_Request, expmsg));
                         strm.Close();
                         return;
                     }
+
+
 
 
 
@@ -250,6 +270,13 @@ namespace RAWServer
 
         static RDJTPRequest ParseRequest(string content)
         {
+
+            // checking before parse
+
+
+
+
+
 
             var request = new RDJTPRequest();
 
