@@ -45,9 +45,7 @@ namespace RAWServer
                 Task.Run(() =>
                 {
 
-
-
-
+                  
 
                     Console.WriteLine("client connected!");
                     var strm = client.GetStream();
@@ -58,12 +56,11 @@ namespace RAWServer
 
                     var request = Encoding.UTF8.GetString(buffer, 0, reqContent);
 
-                    Console.WriteLine($"date: {request}");
-                    //Note: it seems from the tests, that it should first check if a date is even present
-                    // if it isnt, dont bother parsing the request, just return missing date.
+
+                    //TODO: they want us to sample these into one function that just adds on top of the msg.
+                    // ie, the {} request, should return, missing date, missing body, missing method, and such
                     if (!request.Contains("date"))
                     {
-                        Console.WriteLine("date failure");
                         Respond(strm, HandleException(RDJTPStatus.Bad_Request, "missing date"));
                         strm.Close();
                         return;
@@ -374,7 +371,7 @@ namespace RAWServer
 
 
 
-            Console.WriteLine($"debug: {newElement}");
+         
 
             if (newElement == null)
             {
@@ -388,7 +385,13 @@ namespace RAWServer
                 return HandleException(RDJTPStatus.Not_Found);
             }
 
-            elm = newElement;
+
+
+
+
+            categories[categories.IndexOf(elm)] = newElement;
+
+
 
             return new RDJTPResponse() { Status = "3 Updated" };
         }
