@@ -36,7 +36,7 @@ namespace RAWServer
 
             var categories = new List<Category>() { cat1, cat2, cat3 };
 
-
+            var typesOfMethods = new List<string>() { "create", "update", "delete", "read", "echo" };
 
             while (true)
             {
@@ -45,7 +45,7 @@ namespace RAWServer
                 Task.Run(() =>
                 {
 
-                    var failed = false;
+
                     var expmsg = "";
 
                     Console.WriteLine("client connected!");
@@ -71,6 +71,7 @@ namespace RAWServer
                         return;
                     }
 
+                    // parsing request
                     var rdjtpReq = ParseRequest(request);
 
 
@@ -85,13 +86,7 @@ namespace RAWServer
 
                     ////////////
 
-
-                    if (rdjtpReq == null)
-                    {
-                        Respond(strm, HandleException(RDJTPStatus.Bad_Request, "illegal method"));
-                        strm.Close();
-                        return;
-                    }
+                   
 
 
 
@@ -115,16 +110,18 @@ namespace RAWServer
                         return;
                     }
 
-                    var typesOfMethods = new List<string>() { "create", "update", "delete", "read", "echo" };
 
 
-                    //here 2
+
+
                     if (!typesOfMethods.Contains(rdjtpReq.Method))
                     {
                         Respond(strm, HandleException(RDJTPStatus.Bad_Request, "illegal method"));
                         strm.Close();
                         return;
                     }
+
+
 
                     if (!CheckRoute(rdjtpReq))
                     {
@@ -158,7 +155,10 @@ namespace RAWServer
                         strm.Close();
                         return;
                     }
-                    Console.WriteLine("here");
+
+
+
+                    // success up until now
                     var response = new RDJTPResponse();
                     switch (rdjtpReq.Method)
                     {
@@ -280,13 +280,6 @@ namespace RAWServer
         static RDJTPRequest ParseRequest(string content)
         {
 
-            // checking before parse
-
-
-
-
-
-
             var request = new RDJTPRequest();
 
             try
@@ -341,7 +334,6 @@ namespace RAWServer
 
             var elm = categories.Find(x => x.cid == Convert.ToInt32(path[3]));
 
-            Console.WriteLine($"elm: {elm}");
 
             if (elm == null) return HandleException(RDJTPStatus.Not_Found);
 
@@ -390,8 +382,6 @@ namespace RAWServer
             var cid = path[3];
 
 
-
-
             var newElement = new Category();
 
             try
@@ -437,11 +427,9 @@ namespace RAWServer
             var response = new RDJTPResponse();
 
             var path = req.Path.Split("/");
-            Console.WriteLine(path.Length);
             // we know that it can never exceed 3.
             if (path.Length < 4)
             {
-                Console.WriteLine("hit test");
                 response.Status = "1 Ok";
                 response.Body = JsonConvert.SerializeObject(categories);
                 return response;
