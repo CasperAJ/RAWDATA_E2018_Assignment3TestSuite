@@ -29,21 +29,22 @@ namespace RAWServer
             server.Start();
             Console.WriteLine("server started...");
 
+            // init
+            var cat1 = new Category() { cid = 1, name = "Beverages" };
+            var cat2 = new Category() { cid = 2, name = "Condiments" };
+            var cat3 = new Category() { cid = 3, name = "Confections" };
 
-            
+            var categories = new List<Category>() { cat1, cat2, cat3 };
 
-            while(true)
+
+
+            while (true)
             {
                 var client = server.AcceptTcpClient();
 
                     Task.Run(() => {
 
-                        // init
-                        var cat1 = new Category() { cid = 1, name = "Beverages" };
-                        var cat2 = new Category() { cid = 2, name = "Condiments" };
-                        var cat3 = new Category() { cid = 3, name = "Confections" };
-
-                        var categories = new List<Category>() { cat1, cat2, cat3 };
+                        
 
 
 
@@ -286,7 +287,9 @@ namespace RAWServer
 
             var elm = categories.Find(x => x.cid == Convert.ToInt32(path[3]));
 
-            if (elm == null) HandleException(RDJTPStatus.Not_Found);
+            Console.WriteLine($"elm: {elm}");
+
+            if (elm == null) return HandleException(RDJTPStatus.Not_Found);
 
             categories.Remove(elm);
 
