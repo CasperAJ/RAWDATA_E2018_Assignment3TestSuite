@@ -71,33 +71,19 @@ namespace RAWServer
                         return;
                     }
 
-
-
-
-
                     var rdjtpReq = ParseRequest(request);
 
 
+                    expmsg = CheckDate(rdjtpReq);
 
-
-                    if (string.IsNullOrEmpty(rdjtpReq.Date))
+                    if (!string.IsNullOrEmpty(expmsg))
                     {
-                        Respond(strm, HandleException(RDJTPStatus.Bad_Request, "illegal date"));
+                        Respond(strm, HandleException(RDJTPStatus.Bad_Request, expmsg));
                         strm.Close();
                         return;
                     }
 
-
-                    // here
-                    var tmpdate = new double();
-                    if (!double.TryParse(rdjtpReq.Date, out tmpdate))
-                    {
-                        Respond(strm, HandleException(RDJTPStatus.Bad_Request, "illegal date"));
-                        strm.Close();
-                        return;
-                    }
-
-
+                    ////////////
 
 
                     if (rdjtpReq == null)
@@ -203,7 +189,22 @@ namespace RAWServer
 
         }
 
+        static string CheckDate(RDJTPRequest req){
+            var msg = "";
+            if (string.IsNullOrEmpty(req.Date))
+            {
+                msg = "illegal date";
+            }
 
+
+            var tmpdate = new double();
+            if (!double.TryParse(req.Date, out tmpdate))
+            {
+                msg = "illegal date";
+            }
+
+            return msg;
+        }
 
         static string CheckMissing(string content){
             var msg = "";
