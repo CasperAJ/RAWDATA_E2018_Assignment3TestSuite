@@ -92,8 +92,26 @@ namespace RAWServer
 
 
                         if (!CheckRoute(rdjtpReq)){
-                            Console.WriteLine("hit");
+                            
                             var expresponse = HandleException(RDJTPStatus.Not_Found);
+
+                            var path = rdjtpReq.Path.Split("/");
+                            
+                            if (path.Length < 3)
+                            {
+                                expresponse = HandleException(RDJTPStatus.Bad_Request);
+                                Respond(strm, expresponse);
+                                strm.Close();
+                                return;
+                            }
+
+                            if (path[1] != "api" || path[2] != "categories")
+                            {
+                                expresponse = HandleException(RDJTPStatus.Bad_Request);
+                                Respond(strm, expresponse);
+                                strm.Close();
+                                return;
+                            }
 
                             if (rdjtpReq.Body == null)
                             {
