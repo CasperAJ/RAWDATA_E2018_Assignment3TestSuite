@@ -84,11 +84,6 @@ namespace RAWServer
                         return;
                     }
 
-                    ////////////
-
-                   
-
-
 
 
 
@@ -102,24 +97,14 @@ namespace RAWServer
 
 
 
-                    if (rdjtpReq.Path == null && rdjtpReq.Method != "echo")
-                    {
-
-                        Respond(strm, HandleException(RDJTPStatus.Bad_Request));
-                        strm.Close();
-                        return;
-                    }
-
-
-
-
-
                     if (!typesOfMethods.Contains(rdjtpReq.Method))
                     {
                         Respond(strm, HandleException(RDJTPStatus.Bad_Request, "illegal method"));
                         strm.Close();
                         return;
                     }
+
+                    ////////////
 
 
 
