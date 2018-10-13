@@ -7,6 +7,7 @@ namespace RAWServer.Models
         read,
         update,
         delete,
-        echo
+        echo,
+        illegal
     }
 }

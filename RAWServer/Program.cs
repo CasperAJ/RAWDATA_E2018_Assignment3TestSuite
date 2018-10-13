@@ -56,10 +56,30 @@ namespace RAWServer
 
                         var request = Encoding.UTF8.GetString(buffer, 0, reqContent);
                         
+
                         var rdjtpReq = ParseRequest(request);
+                        
                         
 
                         
+                        if (string.IsNullOrEmpty(rdjtpReq.Date))
+                        {
+                            Respond(strm, HandleException(RDJTPStatus.Bad_Request, "illegal date"));
+                            strm.Close();
+                            return;
+                        }
+                        
+                       
+                        // here
+                        var tmpdate = new double();
+                        if(!double.TryParse(rdjtpReq.Date, out tmpdate)){
+                            Respond(strm, HandleException(RDJTPStatus.Bad_Request, "illegal date"));
+                            strm.Close();
+                            return;
+                        }
+                        
+
+               
 
                         if (rdjtpReq == null)
                         {
@@ -81,15 +101,24 @@ namespace RAWServer
 
 
                         
-                        if (rdjtpReq.Path == null && rdjtpReq.Method != RDJTPMethod.echo)
+                        if (rdjtpReq.Path == null && rdjtpReq.Method != "echo")
                         {
 
                             Respond(strm, HandleException(RDJTPStatus.Bad_Request));
                             strm.Close();
                             return;
                         }
-                        
 
+                        var typesOfMethods = new List<string>() { "create", "update", "delete", "read", "echo" };
+
+
+                        //here 2
+                        if (!typesOfMethods.Contains(rdjtpReq.Method))
+                        {
+                            Respond(strm, HandleException(RDJTPStatus.Bad_Request, "illegal method"));
+                            strm.Close();
+                            return;
+                        }
 
                         if (!CheckRoute(rdjtpReq)){
                             
@@ -126,20 +155,20 @@ namespace RAWServer
                         var response = new RDJTPResponse();
                         switch (rdjtpReq.Method)
                         {
-                            case RDJTPMethod.create:
+                            case "create":
                                 response = HandleCreate(rdjtpReq, categories);
                                 break;
-                            case RDJTPMethod.update:
+                            case "update":
                                 response = HandleUpdate(rdjtpReq, categories);
                                 break;
-                            case RDJTPMethod.delete:
+                            case "delete":
                                 response = HandleDelete(rdjtpReq, categories);
                                 break;
-                            case RDJTPMethod.echo:
+                            case "echo":
                                 
                                 response = HandleEcho(rdjtpReq);
                                 break;
-                            case RDJTPMethod.read:
+                            case "read":
                                 response = HandleRead(rdjtpReq, categories);
                                 break;
                             default:
@@ -157,12 +186,15 @@ namespace RAWServer
 
         static bool CheckRequest(RDJTPRequest req){
 
-            if (req.Method == RDJTPMethod.create || req.Method == RDJTPMethod.update || req.Method == RDJTPMethod.echo)
+
+
+
+            if (req.Method == "create" || req.Method == "update" || req.Method == "echo")
             {
                 if (req.Body == null) return false;
             }
 
-            if (req.Method != RDJTPMethod.echo)
+            if (req.Method != "echo")
             {
 
                 if (req.Path == null) return false;
@@ -176,12 +208,12 @@ namespace RAWServer
         static string CheckResource(RDJTPRequest req){
             var msg = "";
 
-            if (req.Method == RDJTPMethod.create || req.Method == RDJTPMethod.update || req.Method == RDJTPMethod.echo)
+            if (req.Method == "create" || req.Method == "update" || req.Method == "echo")
             {
                 if (req.Body == null) msg += "missing body";
             }
 
-            if (req.Method != RDJTPMethod.echo)
+            if (req.Method != "echo")
             {
 
                 if (req.Path == null) msg += "missing path";
@@ -210,6 +242,7 @@ namespace RAWServer
             }
             catch (Exception)
             {
+            
                 return null;
             }
 
@@ -219,7 +252,7 @@ namespace RAWServer
 
 
         static bool CheckRoute(RDJTPRequest req){
-            if (req.Method == RDJTPMethod.echo)
+            if (req.Method == "echo")
             {
                 return true;
             }
