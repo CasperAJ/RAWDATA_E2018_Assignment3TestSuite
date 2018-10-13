@@ -42,150 +42,167 @@ namespace RAWServer
             {
                 var client = server.AcceptTcpClient();
 
-                    Task.Run(() => {
-
-                        
-
+                Task.Run(() =>
+                {
 
 
-                        Console.WriteLine("client connected!");
-                        var strm = client.GetStream();
 
-                        var buffer = new byte[client.ReceiveBufferSize];
 
-                        var reqContent = strm.Read(buffer, 0, buffer.Length);
 
-                        var request = Encoding.UTF8.GetString(buffer, 0, reqContent);
-                        
+                    Console.WriteLine("client connected!");
+                    var strm = client.GetStream();
 
-                        var rdjtpReq = ParseRequest(request);
-                        
-                        
+                    var buffer = new byte[client.ReceiveBufferSize];
 
-                        
-                        if (string.IsNullOrEmpty(rdjtpReq.Date))
+                    var reqContent = strm.Read(buffer, 0, buffer.Length);
+
+                    var request = Encoding.UTF8.GetString(buffer, 0, reqContent);
+
+                    Console.WriteLine($"date: {request}");
+                    //Note: it seems from the tests, that it should first check if a date is even present
+                    // if it isnt, dont bother parsing the request, just return missing date.
+                    if (!request.Contains("date"))
+                    {
+                        Console.WriteLine("date failure");
+                        Respond(strm, HandleException(RDJTPStatus.Bad_Request, "missing date"));
+                        strm.Close();
+                        return;
+                    }
+
+
+
+                    var rdjtpReq = ParseRequest(request);
+
+
+
+
+                    if (string.IsNullOrEmpty(rdjtpReq.Date))
+                    {
+                        Respond(strm, HandleException(RDJTPStatus.Bad_Request, "illegal date"));
+                        strm.Close();
+                        return;
+                    }
+
+
+                    // here
+                    var tmpdate = new double();
+                    if (!double.TryParse(rdjtpReq.Date, out tmpdate))
+                    {
+                        Respond(strm, HandleException(RDJTPStatus.Bad_Request, "illegal date"));
+                        strm.Close();
+                        return;
+                    }
+
+
+
+
+                    if (rdjtpReq == null)
+                    {
+                        Respond(strm, HandleException(RDJTPStatus.Bad_Request, "illegal method"));
+                        strm.Close();
+                        return;
+                    }
+
+
+
+
+
+                    if (!CheckRequest(rdjtpReq))
+                    {
+                        var msg = CheckResource(rdjtpReq);
+                        Respond(strm, HandleException(RDJTPStatus.Bad_Request, $"missing resource {msg}"));
+                        strm.Close();
+                        return;
+                    }
+
+
+
+                    if (rdjtpReq.Path == null && rdjtpReq.Method != "echo")
+                    {
+
+                        Respond(strm, HandleException(RDJTPStatus.Bad_Request));
+                        strm.Close();
+                        return;
+                    }
+
+                    var typesOfMethods = new List<string>() { "create", "update", "delete", "read", "echo" };
+
+
+                    //here 2
+                    if (!typesOfMethods.Contains(rdjtpReq.Method))
+                    {
+                        Respond(strm, HandleException(RDJTPStatus.Bad_Request, "illegal method"));
+                        strm.Close();
+                        return;
+                    }
+
+                    if (!CheckRoute(rdjtpReq))
+                    {
+
+                        var expresponse = HandleException(RDJTPStatus.Not_Found);
+
+                        var path = rdjtpReq.Path.Split("/");
+
+                        if (path.Length < 3)
                         {
-                            Respond(strm, HandleException(RDJTPStatus.Bad_Request, "illegal date"));
-                            strm.Close();
-                            return;
-                        }
-                        
-                       
-                        // here
-                        var tmpdate = new double();
-                        if(!double.TryParse(rdjtpReq.Date, out tmpdate)){
-                            Respond(strm, HandleException(RDJTPStatus.Bad_Request, "illegal date"));
-                            strm.Close();
-                            return;
-                        }
-                        
-
-               
-
-                        if (rdjtpReq == null)
-                        {
-                            Respond(strm, HandleException(RDJTPStatus.Bad_Request, "illegal method"));
-                            strm.Close();
-                            return;
-                        }
-
-
-
-
-
-                        if (!CheckRequest(rdjtpReq)){
-                            var msg = CheckResource(rdjtpReq);
-                            Respond(strm, HandleException(RDJTPStatus.Bad_Request, $"missing resource {msg}"));
-                            strm.Close();
-                            return;
-                        }
-
-
-                        
-                        if (rdjtpReq.Path == null && rdjtpReq.Method != "echo")
-                        {
-
-                            Respond(strm, HandleException(RDJTPStatus.Bad_Request));
-                            strm.Close();
-                            return;
-                        }
-
-                        var typesOfMethods = new List<string>() { "create", "update", "delete", "read", "echo" };
-
-
-                        //here 2
-                        if (!typesOfMethods.Contains(rdjtpReq.Method))
-                        {
-                            Respond(strm, HandleException(RDJTPStatus.Bad_Request, "illegal method"));
-                            strm.Close();
-                            return;
-                        }
-
-                        if (!CheckRoute(rdjtpReq)){
-                            
-                            var expresponse = HandleException(RDJTPStatus.Not_Found);
-
-                            var path = rdjtpReq.Path.Split("/");
-                            
-                            if (path.Length < 3)
-                            {
-                                expresponse = HandleException(RDJTPStatus.Bad_Request);
-                                Respond(strm, expresponse);
-                                strm.Close();
-                                return;
-                            }
-
-                            if (path[1] != "api" || path[2] != "categories")
-                            {
-                                expresponse = HandleException(RDJTPStatus.Bad_Request);
-                                Respond(strm, expresponse);
-                                strm.Close();
-                                return;
-                            }
-
-                            if (rdjtpReq.Body == null)
-                            {
-                                expresponse.Status += " missing body";
-                            }
-
+                            expresponse = HandleException(RDJTPStatus.Bad_Request);
                             Respond(strm, expresponse);
                             strm.Close();
                             return;
                         }
-                        Console.WriteLine("here");
-                        var response = new RDJTPResponse();
-                        switch (rdjtpReq.Method)
+
+                        if (path[1] != "api" || path[2] != "categories")
                         {
-                            case "create":
-                                response = HandleCreate(rdjtpReq, categories);
-                                break;
-                            case "update":
-                                response = HandleUpdate(rdjtpReq, categories);
-                                break;
-                            case "delete":
-                                response = HandleDelete(rdjtpReq, categories);
-                                break;
-                            case "echo":
-                                
-                                response = HandleEcho(rdjtpReq);
-                                break;
-                            case "read":
-                                response = HandleRead(rdjtpReq, categories);
-                                break;
-                            default:
-                            response = HandleException(RDJTPStatus.Error);
-                                break;
+                            expresponse = HandleException(RDJTPStatus.Bad_Request);
+                            Respond(strm, expresponse);
+                            strm.Close();
+                            return;
                         }
-                        Respond(strm, response);
+
+                        if (rdjtpReq.Body == null)
+                        {
+                            expresponse.Status += " missing body";
+                        }
+
+                        Respond(strm, expresponse);
                         strm.Close();
-                    });
+                        return;
+                    }
+                    Console.WriteLine("here");
+                    var response = new RDJTPResponse();
+                    switch (rdjtpReq.Method)
+                    {
+                        case "create":
+                            response = HandleCreate(rdjtpReq, categories);
+                            break;
+                        case "update":
+                            response = HandleUpdate(rdjtpReq, categories);
+                            break;
+                        case "delete":
+                            response = HandleDelete(rdjtpReq, categories);
+                            break;
+                        case "echo":
+
+                            response = HandleEcho(rdjtpReq);
+                            break;
+                        case "read":
+                            response = HandleRead(rdjtpReq, categories);
+                            break;
+                        default:
+                            response = HandleException(RDJTPStatus.Error);
+                            break;
+                    }
+                    Respond(strm, response);
+                    strm.Close();
+                });
 
             }
 
         }
 
 
-        static bool CheckRequest(RDJTPRequest req){
+        static bool CheckRequest(RDJTPRequest req)
+        {
 
 
 
@@ -206,7 +223,8 @@ namespace RAWServer
         }
 
 
-        static string CheckResource(RDJTPRequest req){
+        static string CheckResource(RDJTPRequest req)
+        {
             var msg = "";
 
             if (req.Method == "create" || req.Method == "update" || req.Method == "echo")
@@ -231,9 +249,10 @@ namespace RAWServer
 
             strm.Write(payload, 0, payload.Length);
         }
-        
 
-        static RDJTPRequest ParseRequest(string content){
+
+        static RDJTPRequest ParseRequest(string content)
+        {
 
             var request = new RDJTPRequest();
 
@@ -243,7 +262,7 @@ namespace RAWServer
             }
             catch (Exception)
             {
-            
+
                 return null;
             }
 
@@ -252,7 +271,8 @@ namespace RAWServer
         }
 
 
-        static bool CheckRoute(RDJTPRequest req){
+        static bool CheckRoute(RDJTPRequest req)
+        {
             if (req.Method == "echo")
             {
                 return true;
@@ -279,7 +299,8 @@ namespace RAWServer
 
 
 
-        static RDJTPResponse HandleDelete(RDJTPRequest req, List<Category> categories){
+        static RDJTPResponse HandleDelete(RDJTPRequest req, List<Category> categories)
+        {
 
             var path = req.Path.Split("/");
 
@@ -293,7 +314,7 @@ namespace RAWServer
 
             categories.Remove(elm);
 
-            return new RDJTPResponse() {Status="1 OK"};
+            return new RDJTPResponse() { Status = "1 OK" };
         }
 
         static RDJTPResponse HandleCreate(RDJTPRequest req, List<Category> categories)
@@ -302,7 +323,7 @@ namespace RAWServer
 
             if (req.Body == null) return HandleException(RDJTPStatus.Bad_Request, "missing body");
 
-           
+
 
             var path = req.Path.Split("/");
             if (path.Length < 3) return HandleException(RDJTPStatus.Bad_Request);
@@ -322,7 +343,7 @@ namespace RAWServer
 
             var body = JsonConvert.SerializeObject(newElement);
 
-            return new RDJTPResponse() { Status="2 Created", Body=body};
+            return new RDJTPResponse() { Status = "2 Created", Body = body };
         }
 
         static RDJTPResponse HandleUpdate(RDJTPRequest req, List<Category> categories)
@@ -350,7 +371,7 @@ namespace RAWServer
             }
 
 
-           
+
 
 
             Console.WriteLine($"debug: {newElement}");
@@ -369,7 +390,7 @@ namespace RAWServer
 
             elm = newElement;
 
-            return new RDJTPResponse() { Status="3 Updated" };
+            return new RDJTPResponse() { Status = "3 Updated" };
         }
 
         static RDJTPResponse HandleRead(RDJTPRequest req, List<Category> categories)
@@ -385,7 +406,9 @@ namespace RAWServer
                 response.Status = "1 Ok";
                 response.Body = JsonConvert.SerializeObject(categories);
                 return response;
-            } else {
+            }
+            else
+            {
 
                 response.Status = "1 Ok";
                 int cid;
@@ -409,7 +432,7 @@ namespace RAWServer
             return response;
         }
 
-        static RDJTPResponse HandleException(RDJTPStatus state, string msg="")
+        static RDJTPResponse HandleException(RDJTPStatus state, string msg = "")
         {
             var response = new RDJTPResponse();
             switch (state)
@@ -422,7 +445,9 @@ namespace RAWServer
                     {
 
                         response.Status = $"4 Bad Request {msg}";
-                    } else {
+                    }
+                    else
+                    {
                         response.Status = "4 Bad Request";
                     }
 
