@@ -58,26 +58,13 @@ namespace RAWServer
                     var request = Encoding.UTF8.GetString(buffer, 0, reqContent);
 
 
-                    //TODO: they want us to sample these into one function that just adds on top of the msg.
-                    // ie, the {} request, should return, missing date, missing body, missing method, and such
-                    if (!request.Contains("date"))
-                    {
-                        failed = true;
-                        expmsg = "missing date";
 
-                    }
 
-                    if(!request.Contains("method"))
-                    {
-                        expmsg += " missing method";
-                        failed = true;
-
-                    }
+                    expmsg = CheckMissing(request);
 
 
 
-
-                    if (failed)
+                    if (!string.IsNullOrEmpty(expmsg))
                     {
                         Respond(strm, HandleException(RDJTPStatus.Bad_Request, expmsg));
                         strm.Close();
@@ -199,7 +186,6 @@ namespace RAWServer
                             response = HandleDelete(rdjtpReq, categories);
                             break;
                         case "echo":
-
                             response = HandleEcho(rdjtpReq);
                             break;
                         case "read":
@@ -215,6 +201,28 @@ namespace RAWServer
 
             }
 
+        }
+
+
+
+        static string CheckMissing(string content){
+            var msg = "";
+
+            if (!content.Contains("date"))
+            {
+
+                msg = "missing date";
+
+            }
+
+            if (!content.Contains("method"))
+            {
+                msg += " missing method";
+
+
+            }
+
+            return msg;
         }
 
 
