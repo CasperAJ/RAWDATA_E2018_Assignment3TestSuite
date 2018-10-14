@@ -51,6 +51,7 @@ namespace RAWServer
             {
                 var client = server.AcceptTcpClient();
 
+                // create new task for each client
                 Task.Run(() =>
                 {
 
@@ -68,11 +69,11 @@ namespace RAWServer
 
 
 
-
+                    
                     expmsg = CheckMissing(request);
 
 
-
+                    // if expmsg is not null or empty, an exception occured.
                     if (!string.IsNullOrEmpty(expmsg))
                     {
                         Respond(strm, HandleException(RDJTPStatus.Bad_Request, expmsg));
@@ -86,8 +87,10 @@ namespace RAWServer
                     var rdjtpReq = ParseRequest(request);
 
 
+
                     expmsg = CheckDate(rdjtpReq);
 
+                    // if expmsg is not null or empty, an exception occured.
                     if (!string.IsNullOrEmpty(expmsg))
                     {
                         Respond(strm, HandleException(RDJTPStatus.Bad_Request, expmsg));
@@ -114,8 +117,6 @@ namespace RAWServer
                         strm.Close();
                         return;
                     }
-
-                    ////////////
 
 
 
@@ -185,6 +186,7 @@ namespace RAWServer
 
         }
 
+        // check if date null or empty and if its able to parse
         static string CheckDate(RDJTPRequest req){
             var msg = "";
             if (string.IsNullOrEmpty(req.Date))
@@ -202,6 +204,7 @@ namespace RAWServer
             return msg;
         }
 
+        // check for missing date and method fields
         static string CheckMissing(string content){
             var msg = "";
 
@@ -222,12 +225,9 @@ namespace RAWServer
             return msg;
         }
 
-
+        // body check for specified methods.
         static bool CheckRequest(RDJTPRequest req)
         {
-
-
-
 
             if (req.Method == "create" || req.Method == "update" || req.Method == "echo")
             {
@@ -244,7 +244,7 @@ namespace RAWServer
             return true;
         }
 
-
+        // body check and exception message building for request
         static string CheckResource(RDJTPRequest req)
         {
             var msg = "";
@@ -283,7 +283,7 @@ namespace RAWServer
             return request;
         }
 
-
+        // check if route is legal, from start to finish.
         static bool CheckRoute(RDJTPRequest req)
         {
             if (req.Method == "echo")
@@ -311,7 +311,7 @@ namespace RAWServer
 
 
 
-
+        
         static RDJTPResponse HandleDelete(RDJTPRequest req, List<Category> categories)
         {
 
@@ -341,9 +341,7 @@ namespace RAWServer
             }
 
             var listlength = categories.Count;
-
             newElement.cid = listlength + 1;
-
             categories.Add(newElement);
 
             var body = JsonConvert.SerializeObject(newElement);
@@ -361,7 +359,7 @@ namespace RAWServer
             var newElement = new Category();
 
 
-
+            // if body is illegal, we will have exception on deserialize
             try
             {
                 newElement = JsonConvert.DeserializeObject<Category>(req.Body);
@@ -372,7 +370,7 @@ namespace RAWServer
             }
 
 
-
+            // path[3] is id
             var elm = categories.Find(x => x.cid == Convert.ToInt32(path[3]));
 
             if (elm == null)
@@ -391,6 +389,8 @@ namespace RAWServer
 
             var path = req.Path.Split("/");
 
+            // if only 3 elements exists in path, we have /api/categories
+            // if over, we have /api/categories/<id>
             if (path.Length < 4)
             {
                 response.Status = "1 Ok";
@@ -403,6 +403,7 @@ namespace RAWServer
                 response.Status = "1 Ok";
                 int cid;
 
+                // path[3] is id - try to parse
                 if (!int.TryParse(path[3], out cid)) return HandleException(RDJTPStatus.Bad_Request);
 
                 var element = categories.Find(x => x.cid == cid);
@@ -416,12 +417,14 @@ namespace RAWServer
 
         }
 
+        // no need for checks. just return body.
         static RDJTPResponse HandleEcho(RDJTPRequest req)
         {
             var response = new RDJTPResponse() { Status = "1 OK", Body = req.Body };
             return response;
         }
 
+        // handle exception based on the enum type status, and interpolate the exception message.
         static RDJTPResponse HandleException(RDJTPStatus state, string msg = "")
         {
             var response = new RDJTPResponse();
@@ -431,6 +434,7 @@ namespace RAWServer
                     response.Status = "5 Not Found";
                     break;
                 case RDJTPStatus.Bad_Request:
+
                     if (msg != "")
                     {
 
