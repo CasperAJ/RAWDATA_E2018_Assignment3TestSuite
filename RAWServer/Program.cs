@@ -29,7 +29,7 @@ namespace RAWServer
             server.Start();
             Console.WriteLine("server started...");
 
-            // init
+            // init - state
             var cat1 = new Category() { cid = 1, name = "Beverages" };
             var cat2 = new Category() { cid = 2, name = "Condiments" };
             var cat3 = new Category() { cid = 3, name = "Confections" };
@@ -70,6 +70,8 @@ namespace RAWServer
                         strm.Close();
                         return;
                     }
+
+
 
                     // parsing request
                     var rdjtpReq = ParseRequest(request);
@@ -181,7 +183,7 @@ namespace RAWServer
                 msg = "illegal date";
             }
 
-
+            
             var tmpdate = new double();
             if (!double.TryParse(req.Date, out tmpdate))
             {
@@ -267,16 +269,7 @@ namespace RAWServer
 
             var request = new RDJTPRequest();
 
-            try
-            {
-                request = JsonConvert.DeserializeObject<RDJTPRequest>(content);
-            }
-            catch (Exception)
-            {
-
-                return null;
-            }
-
+            request = JsonConvert.DeserializeObject<RDJTPRequest>(content);
 
             return request;
         }
@@ -288,7 +281,7 @@ namespace RAWServer
             {
                 return true;
             }
-            //TODO: refractor later. this is non generic
+            
             if (!req.Path.Contains("/")) return false;
 
 
@@ -299,7 +292,7 @@ namespace RAWServer
             if (path[1] != "api") return false;
 
 
-            if (path[2] != "categories") { return false; }
+            if (path[2] != "categories") return false; 
 
 
 
@@ -331,13 +324,6 @@ namespace RAWServer
         {
 
 
-            if (req.Body == null) return HandleException(RDJTPStatus.Bad_Request, "missing body");
-
-
-
-            var path = req.Path.Split("/");
-            if (path.Length < 3) return HandleException(RDJTPStatus.Bad_Request);
-
             var newElement = JsonConvert.DeserializeObject<Category>(req.Body);
 
             if (string.IsNullOrEmpty(newElement.name))
@@ -359,15 +345,13 @@ namespace RAWServer
         static RDJTPResponse HandleUpdate(RDJTPRequest req, List<Category> categories)
         {
 
-            if (req.Body == null) return HandleException(RDJTPStatus.Bad_Request, "missing body");
-
             var path = req.Path.Split("/");
             if (path.Length < 4) return HandleException(RDJTPStatus.Bad_Request);
 
-            var cid = path[3];
-
 
             var newElement = new Category();
+
+
 
             try
             {
@@ -380,15 +364,6 @@ namespace RAWServer
 
 
 
-
-
-         
-
-            if (newElement == null)
-            {
-                return HandleException(RDJTPStatus.Bad_Request);
-            }
-
             var elm = categories.Find(x => x.cid == Convert.ToInt32(path[3]));
 
             if (elm == null)
@@ -396,13 +371,7 @@ namespace RAWServer
                 return HandleException(RDJTPStatus.Not_Found);
             }
 
-
-
-
-
             categories[categories.IndexOf(elm)] = newElement;
-
-
 
             return new RDJTPResponse() { Status = "3 Updated" };
         }
@@ -412,7 +381,7 @@ namespace RAWServer
             var response = new RDJTPResponse();
 
             var path = req.Path.Split("/");
-            // we know that it can never exceed 3.
+
             if (path.Length < 4)
             {
                 response.Status = "1 Ok";
