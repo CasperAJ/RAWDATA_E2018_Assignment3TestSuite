@@ -7,6 +7,15 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using RAWServer.Models;
 
+
+/*
+
+    Mikkel Pedersen
+    Mert Ince
+    Kadir Yorulmaz
+    Casper Jørgensen
+
+*/
 namespace RAWServer
 {
     class Program
